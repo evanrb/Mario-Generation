@@ -26,9 +26,19 @@ options = [
     #"m"  # mario's start position, do not generate
 ]
 
+distribution_probability = [
+    .5,
+    .1,
+    .05,
+    .05,
+    .1,
+    .01,
+    0,
+    .09,
+    .1
+]
+
 # The level as a grid of tiles
-
-
 class Individual_Grid(object):
     __slots__ = ["genome", "_fitness"]
 
@@ -151,50 +161,53 @@ class Individual_Grid(object):
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        g = [random.choices(options, k=width) for row in range(height)]
-        weights = {
-            '-' : .90,
-            'X' : .91,
-            '?' : .915,
-            'M' : .925,
-            'B' : .935,
-            'o' : .955,
-            'E' : 1
-        }
-        for col in range(0, height):
-            for row in range(0, width-2):
-                rnd = random.random()
-                for pick,weight in weights.items():
-                    if rnd < weight:
-                        g[col][row] = pick  
-                        break
-
+        g = [random.choices(options, k=width, p=distribution_probability) for row in range(height)]
         g[15][:] = ["X"] * width
         g[14][0] = "m"
         g[7][-1] = "v"
-        # g[8:14][-1] = ["f"] * 6
-        # g[14:16][-1] = ["X", "X"]
-        for col in range (0, 14):
-            g[col][0] = "-"
-
-        g[7][-2] = "v"
-        for col in range(8, 14):
-            g[col][-2] = "f"
-
-        g[14][-1] = "X"
-
-        for col in range(0, 7):
-            g[col][-2] = "-"
-        for col in range(0, 16):
-            g[col][-1] = "-"
-
-        
-        pipe_number = random.randint(0,10)
-        for k in range(pipe_number):
-            pipe_range = random.randint(5, width - 5)
-            pipe_height = random.randint(0, 3)
-            for row in range(pipe_height):
-                g[(15-row)][pipe_range] = "|"
+        g[8:14][-1] = ["f"] * 6
+        g[14:16][-1] = ["X", "X"]
+        y = 0
+        x = 0
+        solid = ["T", "B", "M", "X", "?"]
+        while y < height:
+            while x < width:
+                
+                # if there is a pipe make sure there is a pipe body below it and ensure pipes only exist at valid heights
+                if g[y][x] == "T":
+                    if y < 12:
+                        g[y][x] = "-"
+                    else:
+                        pipe_body = y + 1
+                        while pipe_body < 15:
+                            g[pipe_body][x] = "|"
+                            pipe_body += 1
+                #erase items that are very high
+                if y < 5:
+                    g[y][x] = "-"
+                    
+                #if there is a solid piece higher than 3 from the bottom then ensure there arent solid pieces above it creating a wall
+                if g[y][x] in solid and y <= 12:
+                    if y - 2 > 0:
+                        g[y-1][x] = "-"
+                        g[y-2][x] = "-"
+                        
+                #if you find a solid piece check a range 4 right/left and 4 down for another solid piece to ensure its reachable, if not delete the solid item
+                if g[y][x] in solid and y < 12:
+                    curY = y
+                    reachable = false
+                    while (curY <= 15 or curY <= y+4) and !reachable:
+                        curX = 0
+                        if x > 3:
+                            curtX = x - 4
+                        while curX < x + 4 and !reachable:
+                            if g[curY][curX] in solid:
+                                reachable = true
+                            curX += 1
+                        curY += 1
+                    if !reachable:
+                        g[y][x] = "-"
+>>>>>>> 80aaceb7461a1c4d5cab4f0c2172600f5d069f8f
                 
         return cls(g)
 
