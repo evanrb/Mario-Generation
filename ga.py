@@ -169,8 +169,11 @@ class Individual_Grid(object):
         g[14:16][-1] = ["X", "X"]
         y = 0
         x = 0
+        solid = ["T", "B", "M", "X", "?"]
         while y < height:
             while x < width:
+                
+                # if there is a pipe make sure there is a pipe body below it and ensure pipes only exist at valid heights
                 if g[y][x] == "T":
                     if y < 12:
                         g[y][x] = "-"
@@ -179,14 +182,32 @@ class Individual_Grid(object):
                         while pipe_body < 15:
                             g[pipe_body][x] = "|"
                             pipe_body += 1
-
+                #erase items that are very high
                 if y < 5:
                     g[y][x] = "-"
-
-                if g[y][x] != "-" and y < 12:
+                    
+                #if there is a solid piece higher than 3 from the bottom then ensure there arent solid pieces above it creating a wall
+                if g[y][x] in solid and y <= 12:
                     if y - 2 > 0:
                         g[y-1][x] = "-"
                         g[y-2][x] = "-"
+                        
+                #if you find a solid piece check a range 4 right/left and 4 down for another solid piece to ensure its reachable, if not delete the solid item
+                if g[y][x] in solid and y < 12:
+                    curY = y
+                    reachable = false
+                    while (curY <= 15 or curY <= y+4) and !reachable:
+                        curX = 0
+                        if x > 3:
+                            curtX = x - 4
+                        while curX < x + 4 and !reachable:
+                            if g[curY][curX] in solid:
+                                reachable = true
+                            curX += 1
+                        curY += 1
+                    if !reachable:
+                        g[y][x] = "-"
+                
         return cls(g)
 
 
