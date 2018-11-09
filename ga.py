@@ -153,10 +153,10 @@ class Individual_Grid(object):
         # STUDENT also consider weighting the different tile types so it's not uniformly random
         g = [random.choices(options, k=width) for row in range(height)]
         weights = {
-            '-' : .75,
-            'X' : .85,
-            '?' : .89,
-            'M' : .915,
+            '-' : .90,
+            'X' : .91,
+            '?' : .915,
+            'M' : .925,
             'B' : .935,
             'o' : .955,
             'E' : 1
@@ -176,16 +176,26 @@ class Individual_Grid(object):
         # g[14:16][-1] = ["X", "X"]
         for col in range (0, 14):
             g[col][0] = "-"
-        #Flagpole on second-last column
+
         g[7][-2] = "v"
         for col in range(8, 14):
             g[col][-2] = "f"
-        g[14][-2] = "X"
-        #Whitespace above the flag and in the final column
+
+        g[14][-1] = "X"
+
         for col in range(0, 7):
             g[col][-2] = "-"
         for col in range(0, 16):
             g[col][-1] = "-"
+
+        
+        pipe_number = random.randint(0,10)
+        for k in range(pipe_number):
+            pipe_range = random.randint(5, width - 5)
+            pipe_height = random.randint(0, 3)
+            for row in range(pipe_height):
+                g[(15-row)][pipe_range] = "|"
+                
         return cls(g)
 
 
