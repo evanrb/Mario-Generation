@@ -67,29 +67,67 @@ class Individual_Grid(object):
         # STUDENT implement a mutation operator, also consider not mutating this individual
         # STUDENT also consider weighting the different tile types so it's not uniformly random
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
-
+        max_mutation_count = 10
         left = 1
         right = width - 1
         for y in range(height):
             for x in range(left, right):
-                pass
+                # each enemy has a 10% chance of turning into a wall
+                if genome[y][x] == "E" and random.randint(1, 101) < 10 and max_mutation_count != 0:
+                    genome[y][x] = "X"
+                    max_mutation_count -= 1
+                # each empty space at a plausible pipe height has a 5% chance of turning into a pipe 
+                if y >= 9 and genome[y][x] == "-" and random.randint(1, 101) < 5 and max_mutation_count != 0:
+                    genome[y][x] = "T"
+                    pipe_segment = y + 1
+                    while pipe_segment != 13:
+                        genome[pipe_segment][x] = "|"
+                        pipe_segment += 1
+                    max_mutation_count -= 1
+                # each pipe has a 5% chance of turning into an enemy  
+                if y >= 9 and genome[y][x] == "T" and random.randint(1, 101) < 5 and max_mutation_count != 0:
+                    pipe_segment = y
+                    while pipe_segment != 12:
+                        genome[pipe_segment][x] = "-"
+                        pipe_segment += 1
+                    genome[pipe_segment][x] = "E"
+                    max_mutation_count -= 1
+                # each mushroom space has a 5% chance of moving a small amount and if they move have a 50% chance of becoming a coin
+                if genome[y][x] == "M" and random.randint(1, 101) < 5 and max_mutation_count != 0:
+                    offset = random.choice([-1, 0, 1])
+                    genome[y][x] = "-"
+                    if random.random() <= .5:
+                        genome[y + offset][x + offset] = "?"
+                    else:
+                        genome[y + offset][x + offset] = "M"
+                    max_mutation_count -= 1
+                # each coin box has a 5% chance of moving a small amount and if they move have a 50% chance of becoming a mushroom
+                if genome[y][x] == "?" and random.randint(1, 101) < 5 and max_mutation_count != 0:
+                    offset = random.choice([-1, 0, 1])
+                    genome[y][x] = "-"
+                    if random.random() <= .5:
+                        genome[y + offset][x + offset] = "?"
+                    else:
+                        genome[y + offset][x + offset] = "M"
+                    max_mutation_count -= 1
         return genome
 
     # Create zero or more children from self and other
     def generate_children(self, other):
-        new_genome = copy.deepcopy(self.genome)
+        parent_1_genome = copy.deepcopy(self.genome)
+        child_genome = copy.deepcopy(other.genome)
+        
         # Leaving first and last columns alone...
         # do crossover with other
         left = 1
         right = width - 1
         for y in range(height):
             for x in range(left, right):
-                # STUDENT Which one should you take?  Self, or other?  Why?
-                # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
-                # print("what the fuck am i supposed to do?????")
-                pass
+                if x < (right/2):
+                    child_genome[y][x] = parent_1_genome[y][x]
         # do mutation; note we're returning a one-element tuple here
-        return (Individual_Grid(new_genome),)
+        self.mutate(child_genome)
+        return (Individual_Grid(child_genome),)
 
     # Turn the genome into a level string (easy for this genome)
     def to_level(self):
@@ -114,40 +152,11 @@ class Individual_Grid(object):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
         g = [random.choices(options, k=width) for row in range(height)]
-        weights = {
-            '-' : .75,
-            'X' : .85,
-            '?' : .89,
-            'M' : .915,
-            'B' : .935,
-            'o' : .955,
-            'E' : 1
-        }
-        for col in range(0, height):
-            for row in range(0, width-2):
-                rnd = random.random()
-                for pick,weight in weights.items():
-                    if rnd < weight:
-                        g[col][row] = pick  
-                        break
-
         g[15][:] = ["X"] * width
         g[14][0] = "m"
         g[7][-1] = "v"
-        # g[8:14][-1] = ["f"] * 6
-        # g[14:16][-1] = ["X", "X"]
-        for col in range (0, 14):
-            g[col][0] = "-"
-        #Flagpole on second-last column
-        g[7][-2] = "v"
-        for col in range(8, 14):
-            g[col][-2] = "f"
-        g[14][-2] = "X"
-        #Whitespace above the flag and in the final column
-        for col in range(0, 7):
-            g[col][-2] = "-"
-        for col in range(0, 16):
-            g[col][-1] = "-"
+        g[8:14][-1] = ["f"] * 6
+        g[14:16][-1] = ["X", "X"]
         return cls(g)
 
 
@@ -375,7 +384,6 @@ Individual = Individual_Grid
 
 def generate_successors(population):
     results = []
-    # STUDENT Design and implement this
     while len(results) < random.randint(10, 40):
         pa = tournament_select(population)
         pb = tournament_select(population)
@@ -387,10 +395,10 @@ def generate_successors(population):
 
 def tournament_select(population):
     best_individual = None
-    # # print(population)
+    # print(population)
     k = random.choice(population.copy())
-    # # random.shuffle(k)
-    # # print(k)
+    # random.shuffle(k)
+    # print(k)
 
     for i in range(1,15):
         # print(k)
@@ -399,15 +407,11 @@ def tournament_select(population):
         if best_individual is None or best_individual.fitness() > individual.fitness():
             best_individual = individual
     return individual
-    # pass
-
-def roulette_wheel(population):
-    pass
 
 
 def ga():
     # STUDENT Feel free to play with this parameter
-    pop_limit = 320
+    pop_limit = 480
     # Code to parallelize some computations
     batches = os.cpu_count()
     if pop_limit % batches != 0:
@@ -460,8 +464,7 @@ def ga():
                 print("Calculated fitnesses in:", popdone - gendone, "seconds")
                 population = next_population
         except KeyboardInterrupt:
-            exit()
-            # pass
+            pass
     return population
 
 
