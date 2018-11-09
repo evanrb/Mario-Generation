@@ -152,11 +152,40 @@ class Individual_Grid(object):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
         g = [random.choices(options, k=width) for row in range(height)]
+        weights = {
+            '-' : .75,
+            'X' : .85,
+            '?' : .89,
+            'M' : .915,
+            'B' : .935,
+            'o' : .955,
+            'E' : 1
+        }
+        for col in range(0, height):
+            for row in range(0, width-2):
+                rnd = random.random()
+                for pick,weight in weights.items():
+                    if rnd < weight:
+                        g[col][row] = pick  
+                        break
+
         g[15][:] = ["X"] * width
         g[14][0] = "m"
         g[7][-1] = "v"
-        g[8:14][-1] = ["f"] * 6
-        g[14:16][-1] = ["X", "X"]
+        # g[8:14][-1] = ["f"] * 6
+        # g[14:16][-1] = ["X", "X"]
+        for col in range (0, 14):
+            g[col][0] = "-"
+        #Flagpole on second-last column
+        g[7][-2] = "v"
+        for col in range(8, 14):
+            g[col][-2] = "f"
+        g[14][-2] = "X"
+        #Whitespace above the flag and in the final column
+        for col in range(0, 7):
+            g[col][-2] = "-"
+        for col in range(0, 16):
+            g[col][-1] = "-"
         return cls(g)
 
 
