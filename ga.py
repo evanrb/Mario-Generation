@@ -26,9 +26,19 @@ options = [
     #"m"  # mario's start position, do not generate
 ]
 
+distribution_probability = [
+    .5,
+    .1,
+    .05,
+    .05,
+    .1,
+    .01,
+    0,
+    .09,
+    .1
+]
+
 # The level as a grid of tiles
-
-
 class Individual_Grid(object):
     __slots__ = ["genome", "_fitness"]
 
@@ -151,12 +161,32 @@ class Individual_Grid(object):
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        g = [random.choices(options, k=width) for row in range(height)]
+        g = [random.choices(options, k=width, p=distribution_probability) for row in range(height)]
         g[15][:] = ["X"] * width
         g[14][0] = "m"
         g[7][-1] = "v"
         g[8:14][-1] = ["f"] * 6
         g[14:16][-1] = ["X", "X"]
+        y = 0
+        x = 0
+        while y < height:
+            while x < width:
+                if g[y][x] == "T":
+                    if y < 12:
+                        g[y][x] = "-"
+                    else:
+                        pipe_body = y + 1
+                        while pipe_body < 15:
+                            g[pipe_body][x] = "|"
+                            pipe_body += 1
+
+                if y < 5:
+                    g[y][x] = "-"
+
+                if g[y][x] != "-" and y < 12:
+                    if y - 2 > 0:
+                        g[y-1][x] = "-"
+                        g[y-2][x] = "-"
         return cls(g)
 
 
