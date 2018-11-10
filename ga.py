@@ -326,7 +326,7 @@ class Individual_DE(object):
             penalties -= 1
         if genome[y][x] == "o" > 15:
             penalties -=1
-            
+
         # STUDENT For example, too many stairs are unaesthetic.  Let's penalize that
         if len(list(filter(lambda de: de[1] == "6_stairs", self.genome))) > 5:
             penalties -= 2
@@ -506,6 +506,7 @@ Individual = Individual_Grid
 
 def generate_successors(population):
     results = []
+    # Random selection
     # pa = random.choice(population)
     # pb = random.choice(population)
     # child = pa.generate_children(pb)[0]
@@ -541,8 +542,7 @@ def ga():
     with mpool.Pool(processes=os.cpu_count()) as pool:
         init_time = time.time()
         # STUDENT (Optional) change population initialization
-        population = [Individual.random_individual() if random.random() < 0.9
-                      else Individual.empty_individual()
+        population = [Individual.random_individual()
                       for _g in range(pop_limit)]
         # But leave this line alone; we have to reassign to population because we get a new population that has more cached stuff in it.
         population = pool.map(Individual.calculate_fitness,
