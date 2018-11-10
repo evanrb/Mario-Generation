@@ -33,34 +33,38 @@ def constrain_pipe(genome, y, x):
     if genome[y][x + 1] == "|":
         curY = y
         # print("i am here")
-        while curY < 15 and genome[curY][x + 1] != "T":
+        while curY <= 15 and genome[curY][x + 1] != "T":
             genome[curY][x + 1] = "-"
-            curY += 1
+            curY -= 1
+            if curY == 9:
+                curY = y - 1
+                while genome[curY][x] != "T":
+                    genome[curY][x] = "-"
+                    curY -= 1
+                genome[curY][x] = "-"
+                break        
         genome[curY][x + 1] = "-"
     if genome[y][x - 1] == "|":
         curY = y
         # print("hilllpo")
-        while curY < 15 and genome[curY][x - 1] != "T":
+        while curY < 15 and genome[curY][x - 1] != "T" and curY > 8:
             genome[curY][x - 1] = "-"
-            curY += 1
+            curY -= 1
         genome[curY][x - 1] = "-"
-
     curY = y
     # print("dafuq")
-    while curY < 15:
-        genome[curY][x - 1] = "-"
-        curY += 1
-    curY = y
-    # print("jjj")
-    while curY < 15:
+    while curY <= 15:
         genome[curY][x + 1] = "-"
         curY += 1
-    curY = y + 1
+    curY = y
+    while curY <= 15:
+        genome[curY][x - 1] = "-"
+        curY += 1
     # print("print")
+    curY = y + 1
     while curY <= 15:
         genome[curY][x] = "|"
         curY += 1
-    genome[15][x] = "|"
 
 
 # The level as a grisd of tiles
@@ -113,17 +117,18 @@ class Individual_Grid(object):
                     genome[y][x] = "X"
                     max_mutation_count -= 1
                 # each empty space at a plausible pipe height has a 1% chance of turning into a pipe 
-                if y >= 12 and genome[y][x] == "-" and random.randint(1, 101) == 1 and max_mutation_count != 0:
+                if y >= 12 and genome[y][x] == "-" and random.randint(1, 101) == 1 and  20 < x < 180 and max_mutation_count != 0:
                     genome[y][x] = "T"
                     constrain_pipe(genome, y, x)
                     max_mutation_count -= 1
                 # each pipe has a 5% chance of turning into an enemy  
                 if genome[y][x] == "T" and random.randint(1, 101) == 1 and max_mutation_count != 0:
                     pipe_segment = y
-                    while pipe_segment != 14:
+                    while pipe_segment <= 13:
                         genome[pipe_segment][x] = "-"
                         pipe_segment += 1
                     genome[pipe_segment][x] = "E"
+                    genome[15][x] = "X"
                     max_mutation_count -= 1
                 # each mushroom space has a 5% chance of moving a small amount and if they move have a 50% chance of becoming a coin
                 if genome[y][x] == "M" and random.randint(1, 101) < 5 and max_mutation_count != 0:
@@ -147,8 +152,8 @@ class Individual_Grid(object):
 
     # Create zero or more children from self and other
     def generate_children(self, other):
-        parent_1_genome = copy.deepcopy(self.genome)
-        child_genome = copy.deepcopy(other.genome)
+        # parent_1_genome = copy.deepcopy(self.genome)
+        child_genome = copy.deepcopy(self.genome)
         
         # Leaving first and last columns alone...
         # do crossover with other
@@ -157,7 +162,9 @@ class Individual_Grid(object):
         for y in range(height):
             for x in range(left, right):
                 if x < (right/2):
-                    child_genome[y][x] = parent_1_genome[y][x]
+                    child_genome[y][x] = self.genome[y][x]
+                else:
+                    child_genome[y][x] = other.genome[y][x]
         # do mutation; note we're returning a one-element tuple here
         self.mutate(child_genome)
         return (Individual_Grid(child_genome),)
@@ -237,14 +244,14 @@ class Individual_Grid(object):
                     if not reachable:
                         g[y][x] = "-"
 
-                if g[y][x] in solid and y > 12:
+                if g[y][x] in solid and y > 12 and g[y][x] != "T":
                     g[y][x] = "X"
 
-                if g[y][x] in solid and y == 13:
+                if g[y][x] in solid and y == 13 and g[y][x] != "T":
                     g[14][x] = "X"
 
-                # if g[y][x] in solid and y == 15:
-        
+                if y == 12 and g[y][x] in solid and g[y][x] != "T":
+                    g[y][x] = "-"
 
         g[15][:] = ["X"] * width
         for i in range(0, 3):     
@@ -259,13 +266,13 @@ class Individual_Grid(object):
                     curY -= 1
                 g[y][curX] = "-"
                 curX += 1
-        g[14][0] = "m"
-        g[7][-1] = "v"
-        # g[7][-1] = "v"
-        for col in range(8, 14):
+
+        g[7][-5] = "v"
+        for col in range(8, 15):
             g[col][-5] = "f"
         for col in range(14, 16):
             g[col][-7] = "X"
+        g[14][0] = "m"
         return cls(g)
 
 
@@ -314,6 +321,12 @@ class Individual_DE(object):
             solvability=2.0
         )
         penalties = 0
+
+        if genome[y][x] == "|" > 15:
+            penalties -= 1
+        if genome[y][x] == "o" > 15:
+            penalties -=1
+            
         # STUDENT For example, too many stairs are unaesthetic.  Let's penalize that
         if len(list(filter(lambda de: de[1] == "6_stairs", self.genome))) > 5:
             penalties -= 2
@@ -502,30 +515,24 @@ def generate_successors(population):
         pa = tournament_select(population)
         pb = tournament_select(population)
         child = pa.generate_children(pb)[0]
-
         results.append(child)
     # Hint: Call generate_children() on some individuals and fill up results.
     return results
 
 def tournament_select(population):
     best_individual = None
-    # print(population)
-    k = random.choice(population.copy())
-    # random.shuffle(k)
-    # print(k)
+    k = random.choice(population)
 
-    for i in range(1,15):
-        # print(k)
+    for i in range(1,10):
         individual = k
-        # print(individual)
-        if best_individual is None or best_individual.fitness() > individual.fitness():
+        if best_individual is None or best_individual._fitness < individual._fitness:
             best_individual = individual
     return individual
 
 
 def ga():
     # STUDENT Feel free to play with this parameter
-    pop_limit = 480
+    pop_limit = 72
     # Code to parallelize some computations
     batches = os.cpu_count()
     if pop_limit % batches != 0:
