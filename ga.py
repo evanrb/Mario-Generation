@@ -109,7 +109,7 @@ class Individual_Grid(object):
         max_mutation_count = 10
         left = 1
         right = width - 1
-        print("hilo")
+        # print("hilo")
         for y in range(height):
             for x in range(left, right):
                 # each enemy has a 10% chance of turning into a wall
@@ -322,10 +322,11 @@ class Individual_DE(object):
         )
         penalties = 0
 
-        if genome[y][x] == "|" > 15:
-            penalties -= 1
-        if genome[y][x] == "o" > 15:
-            penalties -=1
+        if len(list(filter(lambda de: de[1] == "o", self.genome))) > 15:
+            penalties -= 2
+
+        if len(list(filter(lambda de: de[1] == "|", self.genome))) > 15:
+            penalties -= 2
 
         # STUDENT For example, too many stairs are unaesthetic.  Let's penalize that
         if len(list(filter(lambda de: de[1] == "6_stairs", self.genome))) > 5:
@@ -496,7 +497,7 @@ class Individual_DE(object):
             (random.randint(1, width - 2), "4_block", random.randint(0, height - 1), random.choice([True, False])),
             (random.randint(1, width - 2), "5_qblock", random.randint(0, height - 1), random.choice([True, False])),
             (random.randint(1, width - 2), "6_stairs", random.randint(1, height - 4), random.choice([-1, 1])),
-            (random.randint(1, width - 2), "7_pipe", random.randint(2, height - 4))
+            (random.randint(1, width - 5), "7_pipe", random.randint(2, height - 4))
         ]) for i in range(elt_count)]
         return Individual_DE(g)
 
