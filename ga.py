@@ -7,6 +7,7 @@ import random
 import shutil
 import time
 import math
+import numpy as np
 
 width = 200
 height = 16
@@ -26,19 +27,48 @@ options = [
     #"m"  # mario's start position, do not generate
 ]
 
-distribution_probability = [
-    .5,
-    .1,
-    .05,
-    .05,
-    .1,
-    .01,
-    0,
-    .09,
-    .1
-]
 
-# The level as a grid of tiles
+def constrain_pipe(genome, y, x):
+    # print(y, x)
+    if genome[y][x + 1] == "|":
+        curY = y
+        # print("i am here")
+        while curY <= 15 and genome[curY][x + 1] != "T":
+            genome[curY][x + 1] = "-"
+            curY -= 1
+            if curY == 9:
+                curY = y - 1
+                while genome[curY][x] != "T":
+                    genome[curY][x] = "-"
+                    curY -= 1
+                genome[curY][x] = "-"
+                break        
+        genome[curY][x + 1] = "-"
+    if genome[y][x - 1] == "|":
+        curY = y
+        # print("hilllpo")
+        while curY < 15 and genome[curY][x - 1] != "T" and curY > 8:
+            genome[curY][x - 1] = "-"
+            curY -= 1
+        genome[curY][x - 1] = "-"
+
+    curY = y
+    # print("dafuq")
+    while curY <= 15:
+        genome[curY][x + 1] = "-"
+        curY += 1
+    curY = y
+    while curY <= 15:
+        genome[curY][x - 1] = "-"
+        curY += 1
+    # print("print")
+    curY = y + 1
+    while curY <= 15:
+        genome[curY][x] = "|"
+        curY += 1
+
+
+# The level as a grisd of tiles
 class Individual_Grid(object):
     __slots__ = ["genome", "_fitness"]
 
@@ -80,27 +110,26 @@ class Individual_Grid(object):
         max_mutation_count = 10
         left = 1
         right = width - 1
+        print("hilo")
         for y in range(height):
             for x in range(left, right):
                 # each enemy has a 10% chance of turning into a wall
                 if genome[y][x] == "E" and random.randint(1, 101) < 10 and max_mutation_count != 0:
                     genome[y][x] = "X"
                     max_mutation_count -= 1
-                # each empty space at a plausible pipe height has a 5% chance of turning into a pipe 
-                if y >= 9 and genome[y][x] == "-" and random.randint(1, 101) < 5 and max_mutation_count != 0:
+                # each empty space at a plausible pipe height has a 1% chance of turning into a pipe 
+                if y >= 12 and 20 < x < 180 and genome[y][x] == "-" and random.randint(1, 101) == 1 and max_mutation_count != 0:
                     genome[y][x] = "T"
-                    pipe_segment = y + 1
-                    while pipe_segment != 13:
-                        genome[pipe_segment][x] = "|"
-                        pipe_segment += 1
+                    constrain_pipe(genome, y, x)
                     max_mutation_count -= 1
                 # each pipe has a 5% chance of turning into an enemy  
-                if y >= 9 and genome[y][x] == "T" and random.randint(1, 101) < 5 and max_mutation_count != 0:
+                if genome[y][x] == "T" and random.randint(1, 101) == 1 and max_mutation_count != 0:
                     pipe_segment = y
-                    while pipe_segment != 12:
+                    while pipe_segment <= 13:
                         genome[pipe_segment][x] = "-"
                         pipe_segment += 1
                     genome[pipe_segment][x] = "E"
+                    genome[15][x] = "X"
                     max_mutation_count -= 1
                 # each mushroom space has a 5% chance of moving a small amount and if they move have a 50% chance of becoming a coin
                 if genome[y][x] == "M" and random.randint(1, 101) < 5 and max_mutation_count != 0:
@@ -157,57 +186,94 @@ class Individual_Grid(object):
             g[col][-1] = "X"
         return cls(g)
 
+
     @classmethod
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        g = [random.choices(options, k=width, p=distribution_probability) for row in range(height)]
-        g[15][:] = ["X"] * width
-        g[14][0] = "m"
-        g[7][-1] = "v"
-        g[8:14][-1] = ["f"] * 6
-        g[14:16][-1] = ["X", "X"]
+        g = [random.choices(options, weights = [
+    .82, #-
+    0, #X
+    .02, #?
+    .01, #M
+    .05, #B
+    .06,#o
+    0, #|
+    .01, #T
+    .03 #E
+], k=width) for row in range(height)]
         y = 0
         x = 0
         solid = ["T", "B", "M", "X", "?"]
-        while y < height:
-            while x < width:
+        for y in range(height):
+            for x in range(width):
                 
+                if x < 5 or x > width - 20:
+                    g[y][x] = "-"
+
                 # if there is a pipe make sure there is a pipe body below it and ensure pipes only exist at valid heights
                 if g[y][x] == "T":
                     if y < 12:
                         g[y][x] = "-"
                     else:
-                        pipe_body = y + 1
-                        while pipe_body < 15:
-                            g[pipe_body][x] = "|"
-                            pipe_body += 1
+                        constrain_pipe(g, y, x)
+                            
                 #erase items that are very high
-                if y < 5:
+                if y < 7:
                     g[y][x] = "-"
                     
                 #if there is a solid piece higher than 3 from the bottom then ensure there arent solid pieces above it creating a wall
                 if g[y][x] in solid and y <= 12:
-                    if y - 2 > 0:
-                        g[y-1][x] = "-"
-                        g[y-2][x] = "-"
+                    g[y-1][x] = "-"
+                    g[y-2][x] = "-"
                         
                 #if you find a solid piece check a range 4 right/left and 4 down for another solid piece to ensure its reachable, if not delete the solid item
                 if g[y][x] in solid and y < 12:
                     curY = y
-                    reachable = false
-                    while (curY <= 15 or curY <= y+4) and !reachable:
+                    reachable = False
+                    while (curY <= 15 or curY <= y+4) and not reachable:
                         curX = 0
                         if x > 3:
                             curtX = x - 4
-                        while curX < x + 4 and !reachable:
+                        while curX < x + 4 and not reachable:
                             if g[curY][curX] in solid:
-                                reachable = true
+                                reachable = True
                             curX += 1
                         curY += 1
-                    if !reachable:
+                    if not reachable:
                         g[y][x] = "-"
+
+                if g[y][x] in solid and y > 12 and g[y][x] != "T":
+                    g[y][x] = "X"
+
+                if g[y][x] in solid and y == 13 and g[y][x] != "T":
+                    g[14][x] = "X"
                 
+                if y == 12 and g[y][x] in solid and g[y][x] != "T":
+                    g[y][x] = "-"
+                # if g[y][x] in solid and y == 15:
+        
+
+        g[15][:] = ["X"] * width
+        for i in range(0, 3):     
+            hole_size = random.randint(1,3)
+            hole_location = random.randint(7, 180)
+            curX = hole_location - hole_size
+            y = 15
+            while curX <= hole_location:
+                curY = y
+                while curY > 9:
+                    g[curY][curX] = "-"
+                    curY -= 1
+                g[y][curX] = "-"
+                curX += 1
+        g[14][0] = "m"
+        g[7][-1] = "v"
+        # g[7][-1] = "v"
+        for col in range(8, 14):
+            g[col][-5] = "f"
+        for col in range(14, 16):
+            g[col][-7] = "X"
         return cls(g)
 
 
@@ -435,6 +501,11 @@ Individual = Individual_Grid
 
 def generate_successors(population):
     results = []
+    # pa = random.choice(population)
+    # pb = random.choice(population)
+    # child = pa.generate_children(pb)[0]
+    # results.append(child)
+
     while len(results) < random.randint(10, 40):
         pa = tournament_select(population)
         pb = tournament_select(population)
